@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LabelDesigner Pro</title>
+  
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bwip-js/3.3.0/bwip-js-min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="logo">
+      <i class="fas fa-tags"></i> LabelDesigner <span>Pro</span>
+    </div>
+    <div class="top-actions">
+      <div class="dropdown">
+        <button class="btn-primary dropbtn"><i class="fas fa-download"></i> Dışa Aktar <i class="fas fa-caret-down"></i></button>
+        <div class="dropdown-content">
+          <a href="#" id="btnExportJson"><i class="fas fa-file-code"></i> JSON Şablon (Yönetici)</a>
+          <a href="#" id="btnExportPng"><i class="fas fa-file-image"></i> PNG Resim</a>
+          <a href="#" id="btnExportPdf"><i class="fas fa-file-pdf"></i> PDF Belgesi</a>
+          <a href="#" id="btnExportHtml"><i class="fab fa-html5"></i> HTML Görüntüsü</a>
+          <hr>
+          <a href="#" id="btnGeneratePython"><i class="fab fa-python"></i> Python (win32ui) Kodu</a>
+          <a href="#" id="btnPrintBrowser"><i class="fas fa-print"></i> Web'den Yazdır (Test)</a>
+        </div>
+      </div>
+      <button id="btnImport"><i class="fas fa-upload"></i> Dosyadan Yükle</button>
+      <input type="file" id="fileImport" style="display: none;" accept=".json">
+    </div>
+  </header>
+
+  <div class="app-container">
+    
+    <!-- Left Sidebar (Toolbox) -->
+    <aside class="sidebar left-sidebar">
+      
+      <div class="panel">
+        <h3><i class="fas fa-ruler-combined"></i> Çalışma Alanı (Piksel)</h3>
+        <div class="input-group-row">
+          <label>Genişlik<input type="number" id="canvasW" value="400"></label>
+          <label>Yükseklik<input type="number" id="canvasH" value="250"></label>
+        </div>
+        <button id="btnResizeCanvas" class="btn-secondary w-100 mt-10">Uygula</button>
+      </div>
+
+      <div class="panel">
+        <h3><i class="fas fa-plus-circle"></i> Araç Kutusu</h3>
+        <button id="addText" class="tool-btn"><i class="fas fa-font"></i> Metin Ekle</button>
+        <button id="addCode128" class="tool-btn"><i class="fas fa-barcode"></i> Code128 Barkod</button>
+        <button id="addDatamatrix" class="tool-btn"><i class="fas fa-qrcode"></i> Datamatrix</button>
+        <button id="addQrCode" class="tool-btn"><i class="fas fa-qrcode"></i> QR Kod</button>
+        
+        <div class="upload-btn-wrapper">
+          <button class="tool-btn"><i class="fas fa-image"></i> Resim Ekle</button>
+          <input type="file" id="imageUpload" accept="image/png, image/jpeg, image/jpg" />
+        </div>
+
+        <div class="upload-btn-wrapper">
+          <button class="tool-btn" style="border-style: dashed;"><i class="fas fa-file-signature"></i> Özel Font Yükle (.ttf, .otf)</button>
+          <input type="file" id="fontUpload" accept=".ttf, .otf" />
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- Center Workspace -->
+    <main class="workspace">
+      <div class="canvas-wrapper">
+        <canvas id="c"></canvas>
+      </div>
+    </main>
+
+    <!-- Right Sidebar (Properties) -->
+    <aside class="sidebar right-sidebar">
+      <div class="panel h-100">
+        <h3><i class="fas fa-sliders-h"></i> Özellikler</h3>
+        
+        <div id="noSelectionMsg" class="empty-state">
+          <i class="fas fa-mouse-pointer"></i>
+          <p>Düzenlemek için<br>bir obje seçin</p>
+        </div>
+
+        <div id="inspector" style="display: none;">
+          
+          <!-- Transform (Konum / Boyut / Açı) -->
+          <div class="prop-group transform-group">
+            <h4 style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px;">Dönüşüm (Transform)</h4>
+            <div class="input-group-row">
+              <label>X (Sol)<input type="number" step="1" id="propX"></label>
+              <label>Y (Üst)<input type="number" step="1" id="propY"></label>
+            </div>
+            <div class="input-group-row">
+              <label>Genişlik<input type="number" step="1" id="propW"></label>
+              <label>Yükseklik<input type="number" step="1" id="propH"></label>
+            </div>
+            <div class="input-group-row">
+              <label>Açı (°)<input type="number" step="1" id="propAngle"></label>
+            </div>
+          </div>
+          <div class="divider"></div>
+
+          <div class="prop-group">
+            <label title="Yazılım tarafında bu objeye veri yollamak için kullanılacak anahtar isim">Değişken Adı (Örn: ad_soyad)</label>
+            <input type="text" id="propVariable" placeholder="Boş bırakılabilir">
+          </div>
+
+          <!-- Metin Özellikleri -->
+          <div id="textProps" style="display: none;">
+            <div class="prop-group">
+              <label>Metin İçeriği</label>
+              <textarea id="propText" rows="3"></textarea>
+            </div>
+            
+            <div class="input-group-row">
+              <div class="prop-group">
+                <label>Font Size</label>
+                <input type="number" id="propFontSize">
+              </div>
+              <div class="prop-group">
+                <label title="Bilgisayarınızda yüklü herhangi bir fontun adını buraya doğrudan yazarak da kullanabilirsiniz.">Font Ailesi</label>
+                <input type="text" id="propFontFamily" list="fontList" placeholder="Font adı e.g. Calibri">
+                <datalist id="fontList">
+                  <option value="Arial"></option>
+                  <option value="Inter"></option>
+                  <option value="Times New Roman"></option>
+                  <option value="Courier New"></option>
+                  <option value="Tahoma"></option>
+                  <option value="Verdana"></option>
+                  <option value="Georgia"></option>
+                  <option value="Trebuchet MS"></option>
+                  <option value="Impact"></option>
+                  <option value="Comic Sans MS"></option>
+                  <option value="Calibri"></option>
+                  <option value="Segoe UI"></option>
+                </datalist>
+              </div>
+            </div>
+
+            <!-- Metin Stili Araçları -->
+            <div class="prop-group">
+              <label>Metin Stili</label>
+              <div class="input-group-row" style="gap: 5px;">
+                <button id="btnTextBold" class="tool-btn" style="margin-bottom: 0px;" title="Kalın (Bold)"><i class="fas fa-bold"></i></button>
+                <button id="btnTextItalic" class="tool-btn" style="margin-bottom: 0px;" title="İtalik (Italic)"><i class="fas fa-italic"></i></button>
+                <button id="btnTextUnderline" class="tool-btn" style="margin-bottom: 0px;" title="Altı Çizili (Underline)"><i class="fas fa-underline"></i></button>
+              </div>
+            </div>
+
+            <div class="prop-group" title="Eğer veri alana sığmazsa ne yapılsın?">
+              <label>Sığmama Durumu (Taşma)</label>
+              <select id="propOverflow">
+                <option value="none">Olduğu Gibi Bırak</option>
+                <option value="wrap">Yazıyı Alt Satıra Kaydır</option>
+                <option value="shrink">Puntosu Küçülsün (Otomatik)</option>
+                <option value="clip">Taşan Kısmı Kes</option>
+              </select>
+            </div>
+            
+            <div class="prop-group" id="maxWidthGroup" style="display: none;">
+              <label>Maksimum Genişlik Tavanı (px)</label>
+              <input type="number" id="propMaxWidth">
+            </div>
+          </div>
+
+          <!-- Barkod Özellikleri -->
+          <div id="barcodeProps" style="display: none;">
+            <div class="prop-group">
+              <label>Barkod Örnek Verisi</label>
+              <input type="text" id="propBarcodeVal">
+            </div>
+            <div class="prop-group" style="margin-top: 10px; margin-bottom: 15px;">
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                <input type="checkbox" id="propBarcodeText" checked style="width: auto;"> Altında Metni Göster
+              </label>
+            </div>
+            <button id="btnUpdateBarcode" class="btn-secondary w-100">Barkodu Güncelle</button>
+          </div>
+
+          <!-- Görsel Özellikleri -->
+          <div id="imageProps" style="display: none;">
+            <div class="prop-group">
+              <label>Ölçekleme (Aspect Ratio)</label>
+              <select id="propImageScale">
+                <option value="contain">Boyutu Koru (Contain)</option>
+                <option value="stretch">Kutuyu Doldur (Stretch)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+          <button id="btnDelete" class="btn-danger w-100"><i class="fas fa-trash-alt"></i> Objeyi Sil</button>
+        </div>
+      </div>
+    </aside>
+
+  </div>
+
+  <!-- Modal for Python Code -->
+  <div id="pythonModal" class="modal">
+    <div class="modal-content">
+      <span class="close" id="closePythonModal">&times;</span>
+      <h2><i class="fab fa-python"></i> Python (win32ui) Çıktısı</h2>
+      <p style="margin-bottom: 10px; color: var(--text-muted);">Aşağıdaki kodu Python scriptinize kopyalayarak bu tasarımı direkt yazıcıdan bastırabilirsiniz.</p>
+      <textarea id="pythonCodeArea" readonly></textarea>
+      <button class="btn-primary mt-10 w-100" id="btnCopyPython"><i class="fas fa-copy"></i> Kodu Kopyala</button>
+    </div>
+  </div>
+
+  <!-- Gizli Canvas (BWIP-js render için) -->
+  <canvas id="hiddenBarcodeCanvas" style="display:none;"></canvas>
+  
+  <script src="smart-guides.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
